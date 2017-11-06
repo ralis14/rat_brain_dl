@@ -1,3 +1,9 @@
+# Raw image for Swanson's atlas
+atlas/sw
+
+# Raw images for Paxino/Watson's atlas
+atlas/pw
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
