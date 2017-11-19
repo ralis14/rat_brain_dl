@@ -3,6 +3,7 @@ from keras.models import Sequential, Model
 from keras.layers import  Input, Flatten, UpSampling2D, Dense, Activation, BatchNormalization, Conv2DTranspose, LeakyReLU, Conv2D, Dropout, Reshape
 from keras.optimizers import Adam, RMSprop
 from tqdm import tqdm
+import numpy as np
 
 class Gen(object):
     """
@@ -102,11 +103,17 @@ class GAN(object):
         model.compile(loss='binary_crossentropy', optimizer=optimize, metrics=['accuracy'])
         self.gan = model
         return self.gan
-    def sample_data(self):
-        pass
-    def s_data_and_gen(self):
+    def sample_data(self, num_samples=100):
         data = []
-        labels =[]
+        return data
+    def s_data_and_gen(self, noise_dim=100, num_samples=100):
+        x_temp = self.sample_data(num_samples=num_samples)
+        x_temp_noise = np.random.uniform(0,1, size=[num_samples, noise_dim])
+        noise_pred = self.G.predict(x_temp_noise)
+        data = np.concatenate((x_temp, noise_pred))
+        labels = np.zeros((2*num_samples, 2))
+        labels[:num_samples, 1] = 1
+        labels[num_samples, 0] = 1
         return data, labels
 
     """
@@ -117,9 +124,14 @@ class GAN(object):
         self.train_mode(model, mode=True)
         model.fit(data, labels, epochs=1, batch_size=b_size)
 
-    def sample_noise(self):
-        data = []
-        labels =[]
+    """
+    sample noise just takes in the gen input dimension or default of 100, and the number of actual samples of data you are using
+    this will craete data and labels that will be used to be ran through the generator.
+    """
+    def sample_noise(self, noise_dim=100, num_samples=100):
+        data = np.random.uniform(0, 1, size=[num_samples, noise_dim])
+        labels = np.zeros((num_samples, 2))
+        labels[:,1] = 1
         return data, labels
 
     """
