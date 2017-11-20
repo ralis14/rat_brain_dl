@@ -96,20 +96,29 @@ class GAN(object):
         model.trainable = mode
         for layer in model.layers:
             layer.trainable = mode
-    def create_gan(self, optimize=RMSprop(lr=.0004, clipvalue=1.0, decay=3e-8)):
+    def main(self, optimize=RMSprop(lr=.0004, clipvalue=1.0, decay=3e-8)):
         model = Sequential()
         model.add(self.G)
         model.add(self.D)
         model.compile(loss='binary_crossentropy', optimizer=optimize, metrics=['accuracy'])
         self.gan = model
         return self.gan
+
+    #TODO return a subset, of sample subset of data
     def sample_data(self, num_samples=100):
-        data = []
+        from keras.datasets import mnist
+        (xtrain, ytrain),(xtest, ytest) = mnist.load_data()
+        data = xtrain[:1000]
+        data = np.reshape(data,(data.shape[0], 28, 28, 1))
         return data
     def s_data_and_gen(self, noise_dim=100, num_samples=100):
         x_temp = self.sample_data(num_samples=num_samples)
-        x_temp_noise = np.random.uniform(0,1, size=[num_samples, noise_dim])
+        x_temp_noise = np.random.uniform(0, 1, size=[num_samples, noise_dim])
         noise_pred = self.G.predict(x_temp_noise)
+
+        print(x_temp.shape)
+        print(noise_pred.shape)
+
         data = np.concatenate((x_temp, noise_pred))
         labels = np.zeros((2*num_samples, 2))
         labels[:num_samples, 1] = 1
@@ -138,7 +147,7 @@ class GAN(object):
     Alternate the training of the Discriminator and the gan with the frozen generator weights.
     This way both are trained but sequentially learning from each other
     """
-    def train(self, epochs=400, samples=100, gen_input_dimension=100, out_verbose=False, progress_freq=50):
+    def train(self, epochs=400, samples=100, gen_input_dimension=100, out_verbose=True, progress_freq=50):
         disc_loss=[]
         gen_loss=[]
         loop = range(epochs)
@@ -160,7 +169,6 @@ class GAN(object):
             return gen_loss, disc_loss
 
             
-        pass
 if __name__ == "__main__":
     print("working")
     #create gen, check sumary using [model_name].summary()
@@ -170,3 +178,16 @@ if __name__ == "__main__":
     #pass into gan, check sumary using [model_name].summary()
 
     #
+    g = Gen(28,28,1,.4)
+    gen = g.main()
+    #gen.summary()
+    d = Disc(.2, .4, input_shape=(28,28,1))
+    disc = d.main()
+    #disc.summary()
+    a = GAN(gen, disc)
+    a.main()
+    a.gan.summary()
+    a.train()
+    
+    #a.train()
+
