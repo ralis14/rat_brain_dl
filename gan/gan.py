@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
 
 class Gen(object):
     """
@@ -112,6 +113,10 @@ class GAN(object):
     def sample_data(self, num_samples=100):
         from keras.datasets import mnist
         (xtrain, ytrain),(xtest, ytest) = mnist.load_data()
+        xtrain = xtrain.astype(float)
+        xtrain /= 255
+        xtrain = xtrain.reshape((xtrain.shape[0],784))
+        xtrain = shuffle(xtrain)
         data = xtrain[:num_samples]
         data = np.reshape(data,(data.shape[0], 28, 28, 1))
         return data
@@ -155,7 +160,7 @@ class GAN(object):
         for i in range(generated_img.shape[0]//20):
             plt.subplot(8, 8, i+1)
             img = generated_img[i,:,:,0]
-            plt.imshow(img)
+            plt.imshow(img, cmap='gray')
             plt.axis('off')
         plt.tight_layout()
         file_name = 'img/imgs_batch_{}.jpg'.format(epoch)
@@ -204,7 +209,7 @@ if __name__ == "__main__":
     g = Gen(28,28,1,.4)
     gen = g.main()
     #gen.summary()
-    d = Disc(.2, .4, input_shape=(28,28,1))
+    d = Disc(.2, .5, input_shape=(28,28,1))
     disc = d.main()
     #disc.summary()
     a = GAN(gen, disc)
