@@ -4,6 +4,9 @@ from keras.layers import  Input, Flatten, UpSampling2D, Dense, Activation, Batch
 from keras.optimizers import Adam, RMSprop
 from tqdm import tqdm
 import numpy as np
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
 
 class Gen(object):
     """
@@ -75,10 +78,11 @@ class Disc(object):
         model.add(Dropout(self.dropout))
 
         model.add(Flatten())
-        model.add(Dense(1))
+        #model.add(Dense(1))
+        model.add(Dense(2))
         model.add(Activation('sigmoid'))
 
-        model.compile(loss='binary_crossentropy', optimizer=optimize, metics=['accuracy'])
+        model.compile(loss='binary_crossentropy', optimizer=optimize, metrics=['accuracy'])
 
         return model
 
@@ -108,29 +112,30 @@ class GAN(object):
     def sample_data(self, num_samples=100):
         from keras.datasets import mnist
         (xtrain, ytrain),(xtest, ytest) = mnist.load_data()
-        data = xtrain[:1000]
+        data = xtrain[:num_samples]
         data = np.reshape(data,(data.shape[0], 28, 28, 1))
         return data
-    def s_data_and_gen(self, noise_dim=100, num_samples=100):
+    def s_data_and_gen(self, noise_dim=100, num_samples=1000):
         x_temp = self.sample_data(num_samples=num_samples)
         x_temp_noise = np.random.uniform(0, 1, size=[num_samples, noise_dim])
         noise_pred = self.G.predict(x_temp_noise)
 
-        print(x_temp.shape)
-        print(noise_pred.shape)
 
         data = np.concatenate((x_temp, noise_pred))
         labels = np.zeros((2*num_samples, 2))
         labels[:num_samples, 1] = 1
         labels[num_samples, 0] = 1
+        assert data.shape[0] == labels.shape[0], 'data shape: {}, labels shape: {}'.format(data.shape, labels.shape)
         return data, labels
 
     """
     pretrain is a method to pretrain your discriminator,
     using real and fake data, generated images from generator and correctly labled data
     """
-    def pre_train(self, model, data, labels, b_size=32):
+    def pre_train(self, model, num_samples=20000, b_size=32):
+        assert num_samples <= 60000, "MNIST max sample num is 60K u passed: {}".format(num_samples)
         self.train_mode(model, mode=True)
+        data, labels = self.s_data_and_gen(num_samples=num_samples)
         model.fit(data, labels, epochs=1, batch_size=b_size)
 
     """
@@ -143,30 +148,48 @@ class GAN(object):
         labels[:,1] = 1
         return data, labels
 
+    def imgs_plot(self,epoch, data_noise, n_ex=16, dim=(4,4), figsize=(10,10)):
+        generated_img = self.G.predict(data_noise)
+        plt.figure(figsize=(8,8))
+        #print('size is: {}'.format(generated_img.shape[0]//20))
+        for i in range(generated_img.shape[0]//20):
+            plt.subplot(8, 8, i+1)
+            img = generated_img[i,:,:,0]
+            plt.imshow(img)
+            plt.axis('off')
+        plt.tight_layout()
+        file_name = 'img/imgs_batch_{}.jpg'.format(epoch)
+        plt.savefig(file_name)
+
     """
     Alternate the training of the Discriminator and the gan with the frozen generator weights.
     This way both are trained but sequentially learning from each other
     """
-    def train(self, epochs=400, samples=100, gen_input_dimension=100, out_verbose=True, progress_freq=50):
+    def train(self, epochs=400, samples=100, gen_input_dimension=100, out_verbose=True, progress_freq=20):
         disc_loss=[]
         gen_loss=[]
         loop = range(epochs)
         if out_verbose:
             loop = tqdm(loop)
+
+        self.pre_train(self.D, num_samples=2000)
         for epoch in loop:
             #train disc
-            data, labels = self.s_data_and_gen()
+            data, labels = self.s_data_and_gen(num_samples=1000)
             self.train_mode(self.D, mode=True)
             disc_loss.append(self.D.train_on_batch(data, labels))
 
             #train gan
-            data, labels = self.sample_noise()
+            data, labels = self.sample_noise(num_samples=1000)
             self.train_mode(self.D, mode=False)
             gen_loss.append(self.gan.train_on_batch(data, labels))
+            self.imgs_plot(epoch, data)
+
 
             if out_verbose and (epoch+1) % progress_freq == 0:
-                print('Epoch number {}: Gen loss: {}, Disc loss: {}'.format(epoch+1, gen_loss[1], disc_loss[-1]))
-            return gen_loss, disc_loss
+                print('Epoch number {}: Gen loss: {}, Disc loss: {}'.format(epoch+1, gen_loss[-1], disc_loss[-1]))
+                #self.imgs_plot(epoch, data)
+        return gen_loss, disc_loss
 
             
 if __name__ == "__main__":
@@ -186,7 +209,7 @@ if __name__ == "__main__":
     #disc.summary()
     a = GAN(gen, disc)
     a.main()
-    a.gan.summary()
+    
     a.train()
     
     #a.train()
