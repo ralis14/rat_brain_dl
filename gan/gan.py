@@ -130,6 +130,9 @@ class GAN(object):
         labels = np.zeros((2*num_samples, 2))
         labels[:num_samples, 1] = 1
         labels[num_samples, 0] = 1
+
+        data, labels = shuffle(data,labels)
+
         assert data.shape[0] == labels.shape[0], 'data shape: {}, labels shape: {}'.format(data.shape, labels.shape)
         return data, labels
 
@@ -160,7 +163,9 @@ class GAN(object):
         for i in range(generated_img.shape[0]//20):
             plt.subplot(8, 8, i+1)
             img = generated_img[i,:,:,0]
+            img *= 255
             plt.imshow(img, cmap='gray')
+            #plt.figimage(img, cmap='gray')
             plt.axis('off')
         plt.tight_layout()
         file_name = 'img/imgs_batch_{}.jpg'.format(epoch)
