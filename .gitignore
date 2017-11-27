@@ -6,7 +6,7 @@ atlas_pw/
 
 # Testing images
 testing/
-
+img/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
