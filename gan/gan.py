@@ -16,8 +16,8 @@ class Gen(object):
     since they cna change it is better to ask for them at initialization and store them
     """
     def __init__(self, dim1, dim2, channels, drop):
-        self.dim1 = dim1//2
-        self.dim2 = dim2//2
+        self.dim1 = dim1//4
+        self.dim2 = dim2//4
         self.chan = channels
         self.start_depth = 256
         self.drop = drop
@@ -31,6 +31,13 @@ class Gen(object):
         model.add(Reshape((self.dim1, self.dim2, self.start_depth)))
         model.add(UpSampling2D())
         model.add(Conv2D(128, 5, padding='same'))
+
+
+        model.add(Dropout(self.drop))
+        model.add(Activation('tanh'))
+        model.add(UpSampling2D())
+        model.add(Conv2D(64, 5, padding='same'))
+
         model.add(Activation('tanh'))
         model.add(Conv2D(1, 5, padding='same'))
         model.add(Activation('tanh'))
@@ -47,9 +54,15 @@ class Disc(object):
 
     def main(self, optimize=RMSprop(lr=.0008, clipvalue=1.0, decay=6e-8)):
         model = Sequential()
-        model.add(Conv2D(128, 5, strides=2, input_shape=self.input_shape, padding='same'))
+        model.add(Conv2D(64, 5, strides=2, input_shape=self.input_shape, padding='same'))
         model.add(Dropout(self.dropout))
         model.add(Activation('tanh'))
+        
+        model.add(Conv2D(128, 5, strides=2, padding='same'))
+        model.add(Dropout(self.dropout))
+        model.add(Activation('tanh'))
+        
+
         model.add(Flatten())
         model.add(Dense(1))
         model.add(Activation('sigmoid'))
